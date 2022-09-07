@@ -4,4 +4,4 @@ RUN conda install -y faiss-gpu scikit-learn pandas flake8 yapf isort yacs gdown 
 
 RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple opencv-python-headless scipy matplotlib tensorboard
 
-RUN apt-get update && apt-get install -y libgl1-mesa-glx libpci-dev curl nano psmisc
+RUN apt-get update && apt install -y libgl1-mesa-glx libpci-dev curl nano psmisc
