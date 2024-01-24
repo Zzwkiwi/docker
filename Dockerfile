@@ -1,7 +1,26 @@
-FROM pytorch/pytorch:1.10.0-cuda11.3-cudnn8-devel
+FROM amd64/ubuntu:20.04
 
-RUN conda install -y faiss-gpu scikit-learn pandas flake8 yapf isort yacs gdown future -c conda-forge
+ARG GIT_COMMIT=main
+ARG GH_PR
+ARG GH_SLUG=pocl/pocl
+ARG LLVM_VERSION=12
 
-RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple opencv-python-headless scipy matplotlib tensorboard
+LABEL git-commit=$GIT_COMMIT vendor=pocl distro=Ubuntu version=1.0
 
-RUN apt-get update && apt install -y libgl1-mesa-glx libpci-dev curl nano psmisc
+ENV TERM=dumb
+ENV TZ=Etc/UTC
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update
+RUN apt upgrade -y
+
+RUN apt install -y tzdata
+RUN apt install -y build-essential ocl-icd-libopencl1 cmake git pkg-config libclang-${LLVM_VERSION}-dev clang-${LLVM_VERSION} libclang-cpp${LLVM_VERSION}-dev llvm-${LLVM_VERSION}-dev make ninja-build ocl-icd-libopencl1 ocl-icd-dev ocl-icd-opencl-dev libhwloc-dev zlib1g zlib1g-dev dialog apt-utils
+
+RUN cd /mnt/csip-106/zzwkiwi ; git clone https://github.com/$GH_SLUG.git ; cd /mnt/csip-106/zzwkiwi/pocl ; git checkout $GIT_COMMIT
+RUN cd /mnt/csip-106/zzwkiwi/pocl ; test -z "$GH_PR" || (git fetch origin +refs/pull/$GH_PR/merge && git checkout -qf FETCH_HEAD) && :
+RUN cd /mnt/csip-106/zzwkiwi/pocl ; mkdir b ; cd b; cmake -G Ninja -DWITH_LLVM_CONFIG=/usr/bin/llvm-config-${LLVM_VERSION} -DCMAKE_INSTALL_PREFIX=/usr ..
+RUN cd /mnt/csip-106/zzwkiwi/pocl/b ; ninja install
+# removing this picks up PoCL from the system install, not the build dir
+RUN cd /mnt/csip-106/zzwkiwi/pocl/b ; rm -f CTestCustom.cmake
+CMD cd /mnt/csip-106/zzwkiwi/pocl/b ; ctest -j4 --output-on-failure -L internal
